@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Steam Market Intelligence</title>
+  <meta name="description" content="Explore 65,000+ Steam games: pricing, genres, competitors and plain-English search.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+
+  <header class="nav">
+    <div class="logo">STEAM<span>//</span>INTEL</div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="market">📊 Market</button>
+      <button class="tab" data-tab="benchmark">🎯 Benchmark</button>
+      <button class="tab" data-tab="chat">💬 Ask the Data</button>
+      <button class="tab" data-tab="data">📁 Raw Data</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Decision support for indie developers</p>
+      <h1>Know the <em>Steam market</em><br>before you ship.</h1>
+      <div class="hero-stats">
+        <div><b data-count="games">0</b><small>games analysed</small></div>
+        <div><b data-count="genres">0</b><small>genres</small></div>
+        <div><b data-count="years">0</b><small>release years</small></div>
+      </div>
+    </section>
+
+    <div id="error" class="error" hidden></div>
+
+    <!-- Filters (Market + Raw Data tabs) -->
+    <section class="filters card" id="filters">
+      <div>
+        <label class="label">Price tiers</label>
+        <div id="tier-chips" class="chips"></div>
+      </div>
+      <div class="slider-box">
+        <label class="label" for="min-recs">Min recommendations: <b id="min-recs-val">0</b></label>
+        <input type="range" id="min-recs" min="0" max="5000" step="100" value="0">
+      </div>
+    </section>
+
+    <!-- TAB: Market -->
+    <section class="panel active" id="tab-market">
+      <div class="metrics" id="market-metrics">
+        <div class="card metric"><small>Games analysed</small><b id="m-games">0</b></div>
+        <div class="card metric"><small>Average price</small><b id="m-price">$0</b></div>
+        <div class="card metric"><small>Avg recommendations</small><b id="m-recs">0</b></div>
+        <div class="card metric"><small>Games with ≥1 recommendation</small><b id="m-rated">0%</b></div>
+      </div>
+      <div id="market-empty" class="card empty" hidden>No games match these filters. Select a price tier or lower the minimum.</div>
+      <div class="grid2" id="market-charts">
+        <div class="card"><h3>Average recommendations by price tier</h3><p class="hint">A few mega-hits pull averages up, so read this next to the chart on the right.</p><div id="ch-tier"></div></div>
+        <div class="card"><h3>Hit rate by price tier</h3><p class="hint">Share of games that received at least one recommendation.</p><div id="ch-rate"></div></div>
+        <div class="card"><h3>Top 10 genres by engagement</h3><p class="hint">Single genres (a game can have several), average recommendations.</p><div id="ch-genre"></div></div>
+        <div class="card"><h3>Games released per year</h3><p class="hint">How crowded is the store getting?</p><div id="ch-year"></div></div>
+      </div>
+    </section>
+
+    <!-- TAB: Benchmark -->
+    <section class="panel" id="tab-benchmark">
+      <div class="card">
+        <label class="label" for="game-input">Search a game title</label>
+        <div class="search">
+          <input id="game-input" type="text" autocomplete="off" placeholder="e.g. ELDEN RING, Palworld, Lethal Company…">
+          <div id="suggest" class="suggest" hidden></div>
+        </div>
+      </div>
+      <div id="bench-result" hidden>
+        <div class="card profile">
+          <div>
+            <h2 id="b-name"></h2>
+            <p id="b-sub" class="hint"></p>
+          </div>
+          <span class="badge" id="b-rank"></span>
+        </div>
+        <div class="metrics">
+          <div class="card metric"><small>Price</small><b id="b-price"></b><i id="b-price-d"></i></div>
+          <div class="card metric"><small>Recommendations</small><b id="b-recs"></b><i id="b-recs-d"></i></div>
+          <div class="card metric"><small>Primary genre</small><b id="b-genre"></b><i id="b-peers"></i></div>
+          <div class="card metric"><small>Released</small><b id="b-year"></b><i>release year</i></div>
+        </div>
+        <div class="grid2">
+          <div class="card"><h3>Position inside its genre</h3><p class="hint">Percentile vs every game in the genre. 50% = genre median.</p><div id="ch-radar"></div></div>
+          <div class="card"><h3>Closest competitors</h3><p class="hint">Same genre, price within about ±30%, ranked by recommendations.</p><div id="rivals"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: Chat -->
+    <section class="panel" id="tab-chat">
+      <div class="card chat">
+        <div id="messages" class="messages"></div>
+        <div class="chips" id="suggestions"></div>
+        <form id="chat-form" class="chat-form">
+          <input id="chat-input" type="text" autocomplete="off" placeholder="Ask about games, prices, genres, years…">
+          <button type="submit">Send ➤</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB: Data -->
+    <section class="panel" id="tab-data">
+      <div class="card">
+        <div class="row-between">
+          <h3>Data warehouse export <span class="hint" id="data-count"></span></h3>
+          <a class="btn" id="download" href="/download.csv">⬇ Download filtered CSV</a>
+        </div>
+        <div class="table-wrap"><table id="data-table"></table></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>Built with Python · pandas · SQLite · Plotly &nbsp;|&nbsp; Data: Steam games 2021–2025</footer>
+
+  <script src="/static/plotly.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
