@@ -218,6 +218,8 @@
     const wait = Math.max(0, 700 - (performance.now() - shownAt));  // avoid a jarring flash
     setTimeout(() => {
       document.body.classList.remove("is-loading");
+      const tag = document.querySelector(".eyebrow");
+      if (tag) setTimeout(() => scramble(tag), 400);
       if (loader) {
         loader.classList.add("done");
         loader.addEventListener("transitionend", () => loader.remove(), { once: true });
@@ -348,12 +350,178 @@
   });
 
   // ------------------------------------------------------------------
+  // Reels-style scroll effects
+  // ------------------------------------------------------------------
+  const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  // Smooth momentum scrolling (Lenis). Native scrolling is kept for reduced motion.
+  let lenis = null;
+  if (!reduceMotion && window.Lenis) {
+    lenis = new Lenis({ lerp: 0.09 });
+    document.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener("click", (e) => {
+      const target = document.querySelector(link.getAttribute("href"));
+      if (target) { e.preventDefault(); lenis.scrollTo(target, { offset: -90 }); }
+    }));
+  }
+
+  // Marquee rows: content is doubled so it can loop forever without a gap.
+  const marquees = [...document.querySelectorAll(".marquee-row")].map((row) => {
+    row.innerHTML += row.innerHTML;
+    return { row, x: 0, speed: parseFloat(row.dataset.speed) };
+  });
+  let lastScroll = scrollY;
+  let velocity = 0;
+
+  // Big statement whose words light up as you scroll past it.
+  const scrub = document.getElementById("scrub");
+  const scrubWords = [];
+  if (scrub) {
+    scrub.innerHTML = scrub.textContent.trim().split(/\s+/)
+      .map((word) => `<span class="sw">${word}</span>`).join(" ");
+    scrubWords.push(...scrub.querySelectorAll(".sw"));
+  }
+
+  // Finding cards stack on top of each other; the ones underneath shrink and dim.
+  const findings = [...document.querySelectorAll(".finding")];
+
+  // Footer wordmark rises into view at the bottom of the page.
+  const wordmark = document.querySelector(".wordmark");
+  const cue = document.querySelector(".scroll-cue");
+
+  // Text "decode" effect for small labels.
+  const GLYPHS = "!<>-_/[]{}=+*^?#01";
+  function scramble(el, duration = 700) {
+    const node = [...el.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+    if (!node || reduceMotion) return;
+    const final = node.__final || (node.__final = node.textContent);
+    const start = performance.now();
+    cancelAnimationFrame(node.__raf);
+    const tick = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const shown = Math.floor(p * final.length);
+      node.textContent = [...final].map((ch, i) =>
+        i < shown || ch === " " ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0]).join("");
+      if (p < 1) node.__raf = requestAnimationFrame(tick);
+    };
+    node.__raf = requestAnimationFrame(tick);
+  }
+  if (!reduceMotion && "IntersectionObserver" in window) {
+    const decodeObserver = new IntersectionObserver((entries) => entries.forEach((entry) => {
+      if (entry.isIntersecting) { scramble(entry.target); decodeObserver.unobserve(entry.target); }
+    }), { threshold: 0.6 });
+    document.querySelectorAll(".story-kicker, .finding h3").forEach((el) => decodeObserver.observe(el));
+  }
+  document.querySelectorAll(".card-head h3").forEach((h) =>
+    h.closest(".card").addEventListener("mouseenter", () => scramble(h, 450)));
+
+  // Cursor ring that trails the pointer and reacts to what is underneath it.
+  const cursor = document.getElementById("cursor");
+  const pointer = { x: -100, y: -100, cx: -100, cy: -100 };
+  if (cursor && fine && !reduceMotion) {
+    cursor.classList.add("on");
+    addEventListener("pointermove", (e) => {
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      const t = e.target.closest ? e.target : document.body;
+      cursor.classList.toggle("hover", !!t.closest("a, button, .chip, .tab, input, .finding"));
+      cursor.classList.toggle("drag", !!t.closest(".tower-stage"));
+    }, { passive: true });
+    document.addEventListener("pointerleave", () => cursor.classList.add("gone"));
+    document.addEventListener("pointerenter", () => cursor.classList.remove("gone"));
+  }
+
+  // Magnetic buttons lean toward the pointer.
+  if (fine && !reduceMotion) {
+    document.querySelectorAll(".btn, .chat-form button, .logo, .scroll-cue").forEach((el) => {
+      el.classList.add("magnet");
+      el.addEventListener("pointermove", (e) => {
+        const box = el.getBoundingClientRect();
+        el.style.translate = `${((e.clientX - box.left - box.width / 2) * 0.25).toFixed(1)}px ${((e.clientY - box.top - box.height / 2) * 0.35).toFixed(1)}px`;
+      });
+      el.addEventListener("pointerleave", () => (el.style.translate = ""));
+    });
+  }
+
+  // Spotlight that follows the pointer along card borders.
+  addEventListener("pointermove", (e) => {
+    const card = e.target.closest && e.target.closest(".card, .finding, .stat");
+    if (!card) return;
+    const box = card.getBoundingClientRect();
+    card.style.setProperty("--sx", e.clientX - box.left + "px");
+    card.style.setProperty("--sy", e.clientY - box.top + "px");
+  }, { passive: true });
+
+  function scrollEffects(dt) {
+    const y = scrollY;
+    velocity += ((y - lastScroll) - velocity) * 0.15;
+    lastScroll = y;
+
+    // Hero parallax: text drifts up faster than the 3D chart and both fade out.
+    if (hero) {
+      const h = Math.min(y, innerHeight);
+      hero.style.setProperty("--sy", (h * 0.35).toFixed(1) + "px");
+      hero.style.setProperty("--fade", Math.max(0, 1 - h / (innerHeight * 0.8)).toFixed(3));
+    }
+    if (cue) cue.classList.toggle("hide", y > 40);
+
+    // Marquees speed up and lean with scroll velocity.
+    const skew = clamp(-velocity * 0.4, -14, 14);
+    marquees.forEach((m) => {
+      const half = m.row.scrollWidth / 2;
+      m.x -= m.speed * (1 + Math.abs(velocity) * 0.25) * dt * 0.06;
+      if (m.x <= -half) m.x += half;
+      if (m.x > 0) m.x -= half;
+      m.row.style.transform = `translateX(${m.x.toFixed(1)}px) skewX(${skew.toFixed(2)}deg)`;
+    });
+
+    // Scrubbed words.
+    if (scrub && scrub.offsetParent) {
+      const box = scrub.getBoundingClientRect();
+      const p = clamp((innerHeight * 0.9 - box.top) / (innerHeight * 0.55), 0, 1);  // fills as it crosses mid-screen
+      const lit = p * scrubWords.length;
+      scrubWords.forEach((w, i) => (w.style.opacity = (0.14 + 0.86 * clamp(lit - i, 0, 1)).toFixed(3)));
+    }
+
+    // Stacking cards.
+    if (findings.length && findings[0].offsetParent) {
+      const boxes = findings.map((f) => f.getBoundingClientRect());
+      const tops = findings.map((f) => parseFloat(getComputedStyle(f).top) || 0);
+      findings.forEach((card, i) => {
+        let covered = 0;
+        for (let j = i + 1; j < findings.length; j++) {
+          covered += clamp(1 - (boxes[j].top - tops[j]) / boxes[i].height, 0, 1);
+        }
+        card.style.scale = (1 - covered * 0.05).toFixed(4);
+        card.style.filter = covered > 0.01 ? `brightness(${(1 - covered * 0.22).toFixed(3)})` : "";
+      });
+    }
+
+    // Footer wordmark.
+    if (wordmark) {
+      const box = wordmark.parentElement.getBoundingClientRect();
+      const p = clamp((innerHeight - box.top) / box.height, 0, 1);
+      wordmark.style.translate = `0 ${((1 - p) * 70).toFixed(1)}%`;
+      wordmark.style.opacity = p.toFixed(3);
+    }
+
+    // Cursor ring.
+    if (cursor) {
+      pointer.cx += (pointer.x - pointer.cx) * 0.2;
+      pointer.cy += (pointer.y - pointer.cy) * 0.2;
+      cursor.style.transform = `translate(${pointer.cx.toFixed(1)}px, ${pointer.cy.toFixed(1)}px)`;
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Animation loop
   // ------------------------------------------------------------------
   let last = performance.now();
   function frame(now) {
     const dt = now - last;
     last = now;
+    if (lenis) lenis.raf(now);
+    scrollEffects(Math.min(dt, 50));
 
     scrollSmooth += (scrollY - scrollSmooth) * 0.08;
     mouse.sx += (mouse.x - mouse.sx) * 0.05;

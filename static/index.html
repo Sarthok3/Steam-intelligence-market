@@ -46,7 +46,7 @@
 
   <header class="nav">
     <div class="logo"><span class="logo-mark"><svg class="i"><use href="#i-chart"/></svg></span>Steam Intel</div>
-    <nav class="tabs" id="tabs">
+    <nav class="tabs" data-lenis-prevent id="tabs">
       <button class="tab active" data-tab="market" style="--c: var(--blue)"><svg class="i"><use href="#i-chart"/></svg>Market</button>
       <button class="tab" data-tab="benchmark" style="--c: var(--orange)"><svg class="i"><use href="#i-target"/></svg>Benchmark</button>
       <button class="tab" data-tab="chat" style="--c: var(--green)"><svg class="i"><use href="#i-chat"/></svg>Ask the data</button>
@@ -72,7 +72,17 @@
         <figcaption><span class="live"></span>Share of games by price tier · drag to spin · reacts to filters</figcaption>
         <div class="tower-legend" id="tower-legend"></div>
       </figure>
+      <a class="scroll-cue" href="#filters" aria-label="Scroll to the dashboard"><span class="mouse"><i></i></span>Scroll to explore</a>
     </section>
+
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-row" data-speed="0.6">
+        <span>Action</span><b>✦</b><span class="o">RPG</span><b>✦</b><span>Indie</span><b>✦</b><span class="o">Strategy</span><b>✦</b><span>Simulation</span><b>✦</b><span class="o">Adventure</span><b>✦</b><span>Racing</span><b>✦</b><span class="o">Sports</span><b>✦</b><span>Casual</span><b>✦</b><span class="o">Massively Multiplayer</span><b>✦</b>
+      </div>
+      <div class="marquee-row small" data-speed="-0.45">
+        <span>65,521 games</span><b>/</b><span>22 genres</span><b>/</b><span>2021 → 2025</span><b>/</b><span>$7.20 average price</span><b>/</b><span>12% ever recommended</span><b>/</b><span>20,100 releases in 2025</span><b>/</b>
+      </div>
+    </div>
 
     <div id="error" class="error" hidden></div>
 
@@ -103,6 +113,33 @@
         <div class="card"><div class="card-head" style="--c: var(--pink)"><span class="ico"><svg class="i"><use href="#i-layers"/></svg></span><div><h3>Top 10 genres by engagement</h3><p class="hint">Single genres (a game can have several), average recommendations.</p></div></div><div id="ch-genre"></div></div>
         <div class="card"><div class="card-head" style="--c: var(--amber)"><span class="ico"><svg class="i"><use href="#i-trend"/></svg></span><div><h3>Games released per year</h3><p class="hint">How crowded is the store getting?</p></div></div><div id="ch-year"></div></div>
       </div>
+
+      <section class="story" aria-label="Key findings">
+        <p class="story-kicker"><svg class="i"><use href="#i-trend"/></svg>What the data says</p>
+        <p class="scrub" id="scrub">Most Steam games are never recommended. Only twelve percent get even one. Price, genre and timing decide who gets noticed.</p>
+        <div class="stack">
+          <article class="finding" style="--c: var(--pink); --i: 0">
+            <span class="f-num">01</span>
+            <div class="f-body"><h3>Higher price tiers get noticed more</h3><p>Games priced $30+ average about 6,148 recommendations. Free games average about 96. Correlation, not proof: bigger studios also charge more.</p></div>
+            <b class="f-big">64×</b>
+          </article>
+          <article class="finding" style="--c: var(--orange); --i: 1">
+            <span class="f-num">02</span>
+            <div class="f-body"><h3>Most games are never recommended</h3><p>Only 12% of all games have at least one recommendation and the median is zero. Just 0.7% of free games get any, versus 44–47% at $20 and above.</p></div>
+            <b class="f-big">88%</b>
+          </article>
+          <article class="finding" style="--c: var(--amber); --i: 2">
+            <span class="f-num">03</span>
+            <div class="f-body"><h3>The store is getting crowded</h3><p>Releases grew from about 8,400 in 2021 to about 20,100 in 2025, so every new game competes with more titles than the year before.</p></div>
+            <b class="f-big">2.4×</b>
+          </article>
+          <article class="finding" style="--c: var(--green); --i: 3">
+            <span class="f-num">04</span>
+            <div class="f-body"><h3>MMO, RPG and Action lead engagement</h3><p>These genres have the highest average recommendations. Indie and Strategy sit at the bottom of the top ten.</p></div>
+            <b class="f-big">#1</b>
+          </article>
+        </div>
+      </section>
     </section>
 
     <!-- TAB: Benchmark -->
@@ -143,7 +180,7 @@
     <section class="panel" id="tab-chat">
       <div class="card chat">
         <div class="card-head" style="--c: var(--green)"><span class="ico"><svg class="i"><use href="#i-chat"/></svg></span><div><h3>Ask the data</h3><p class="hint">Plain English in, filtered results out. Genres, price limits, years and "top N" all work.</p></div></div>
-        <div id="messages" class="messages"></div>
+        <div id="messages" class="messages" data-lenis-prevent></div>
         <div class="chips" id="suggestions"></div>
         <form id="chat-form" class="chat-form">
           <input id="chat-input" type="text" autocomplete="off" placeholder="Ask about games, prices, genres, years…">
@@ -159,14 +196,20 @@
           <div class="card-head" style="--c: var(--amber)"><span class="ico"><svg class="i"><use href="#i-db"/></svg></span><div><h3>Data warehouse export</h3><p class="hint" id="data-count"></p></div></div>
           <a class="btn" id="download" href="/download.csv"><svg class="i"><use href="#i-download"/></svg>Download CSV</a>
         </div>
-        <div class="table-wrap"><table id="data-table"></table></div>
+        <div class="table-wrap" data-lenis-prevent><table id="data-table"></table></div>
       </div>
     </section>
   </main>
 
-  <footer>Built with Python · pandas · SQLite · Plotly <span class="sep">/</span> Data: Steam games 2021–2025</footer>
+  <footer>
+    <div class="wordmark" aria-hidden="true">Steam<span>Intel</span></div>
+    <p>Built with Python · pandas · SQLite · Plotly <span class="sep">/</span> Data: Steam games 2021–2025</p>
+  </footer>
+
+  <div class="cursor" id="cursor" aria-hidden="true"><span></span></div>
 
   <script src="/static/plotly.min.js"></script>
+  <script src="/static/lenis.min.js"></script>
   <script src="/static/fx.js"></script>
   <script src="/static/app.js"></script>
 </body>
