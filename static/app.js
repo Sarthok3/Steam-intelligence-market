@@ -5,6 +5,10 @@ const PLOT_CONFIG = { displayModeBar: false, responsive: true };
 const fmt = (n) => Math.round(n).toLocaleString();
 const money = (n) => "$" + Number(n).toFixed(2);
 
+// One colour per price tier, cheapest to most expensive (matches TIER_COLORS in server.py)
+const TIER_COLORS = ["#7d8aa0", "#4c9aff", "#2fbf71", "#f5b83d", "#ff7a45", "#f0628c"];
+const tierColor = (tier) => TIER_COLORS[state.allTiers.indexOf(tier)] || TIER_COLORS[0];
+
 const state = { tiers: [], allTiers: [], minRecs: 0, tab: "market", benchLoaded: false };
 
 // ---------- small helpers ----------
@@ -16,7 +20,8 @@ function escapeHtml(text) {
 
 function showError(message) {
   const box = $("#error");
-  box.textContent = message;
+  box.innerHTML = '<svg class="i"><use href="#i-alert"/></svg>';
+  box.append(message);
   box.hidden = false;
   clearTimeout(showError.timer);
   showError.timer = setTimeout(() => (box.hidden = true), 6000);
@@ -76,10 +81,12 @@ function buildFilters(tiers) {
   tiers.forEach((tier) => {
     const chip = document.createElement("button");
     chip.className = "chip on";
-    chip.textContent = tier;
+    chip.dataset.tier = tier;
+    chip.style.setProperty("--c", tierColor(tier));
+    chip.innerHTML = `<span class="dot"></span>${escapeHtml(tier)}`;
     chip.addEventListener("click", () => {
       chip.classList.toggle("on");
-      state.tiers = [...holder.querySelectorAll(".chip.on")].map((c) => c.textContent);
+      state.tiers = [...holder.querySelectorAll(".chip.on")].map((c) => c.dataset.tier);
       filtersChanged();
     });
     holder.appendChild(chip);
@@ -220,7 +227,7 @@ function addMessage(kind, html, extraClass = "") {
 }
 
 function initChat() {
-  addMessage("bot", "Hi! 👋 Ask me about any of the 65,000+ Steam games in plain English. Try one of the ideas below.");
+  addMessage("bot", "Hi! Ask me about any of the 65,000+ Steam games in plain English. Try one of the ideas below.");
   const holder = $("#suggestions");
   SUGGESTIONS.forEach((text) => {
     const chip = document.createElement("button");
@@ -260,7 +267,7 @@ async function ask(question) {
     messages.scrollTop = messages.scrollHeight;
   } catch (err) {
     typing.remove();
-    addMessage("bot", "😕 " + escapeHtml(err.message));
+    addMessage("bot", escapeHtml(err.message));
   }
 }
 
@@ -274,9 +281,9 @@ async function loadData() {
   $("#download").href = "/download.csv?" + queryString();
   try {
     const d = await api("/api/data?" + queryString());
-    $("#data-count").textContent = `(top ${d.rows.length} by recommendations — download for everything)`;
+    $("#data-count").textContent = `Top ${d.rows.length} games by recommendations. Download the CSV for everything.`;
     const body = d.rows.map((r) =>
-      `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.genres)}</td><td>${escapeHtml(r.price_tier)}</td><td class="num">${money(r.price_numeric)}</td><td class="num">${fmt(r.recommendations)}</td><td class="num">${r.release_year}</td></tr>`
+      `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.genres)}</td><td><span class="tier-pill" style="--c: ${tierColor(r.price_tier)}">${escapeHtml(r.price_tier)}</span></td><td class="num">${money(r.price_numeric)}</td><td class="num">${fmt(r.recommendations)}</td><td class="num">${r.release_year}</td></tr>`
     ).join("");
     $("#data-table").innerHTML =
       `<tr><th>Title</th><th>Genres</th><th>Tier</th><th class="num">Price</th><th class="num">Recs</th><th class="num">Year</th></tr>${body}`;

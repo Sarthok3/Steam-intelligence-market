@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 from db_pipeline import DB_PATH, PRICE_LABELS, SteamPipeline
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-TIER_COLORS = ["#3a3a3a", "#555555", "#777777", "#9a9a9a", "#cfcfcf", "#fff312"]
+TIER_COLORS = ["#7d8aa0", "#4c9aff", "#2fbf71", "#f5b83d", "#ff7a45", "#f0628c"]
 
 
 # ---------------------------------------------------------------
@@ -35,13 +35,16 @@ def style(fig, height=330):
         template="plotly_dark",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color="#8a8a8a"),
+        font=dict(family="Inter, sans-serif", color="#8b97a8"),
         margin=dict(l=10, r=10, t=10, b=10),
         height=height,
         showlegend=False,
+        bargap=0.35,
+        hoverlabel=dict(bgcolor="#1c2430", bordercolor="#344052", font=dict(family="Inter, sans-serif", color="#eef2f7")),
     )
-    fig.update_xaxes(gridcolor="#1f1f1f", linecolor="#262626", zeroline=False)
-    fig.update_yaxes(gridcolor="#1f1f1f", linecolor="#262626", zeroline=False)
+    fig.update_traces(marker_cornerradius=6, selector=dict(type="bar"))
+    fig.update_xaxes(gridcolor="#1f2732", linecolor="#242d3a", zeroline=False)
+    fig.update_yaxes(gridcolor="#1f2732", linecolor="#242d3a", zeroline=False)
     return json.loads(fig.to_json())
 
 
@@ -221,7 +224,7 @@ class SteamDatabase:
         # Reverse the sorted rows so the largest horizontal bar appears at the top.
         fig_genre = go.Figure(go.Bar(
             x=genre_df["avg_recs"].round(1).tolist(), y=genre_df["genre"].tolist(), orientation="h",
-            marker=dict(color=genre_df["avg_recs"].tolist(), colorscale=[[0, "#3a3a3a"], [1, "#fff312"]]),
+            marker=dict(color="#f0628c"),
             customdata=genre_df["games"].tolist(),
             hovertemplate="%{y}<br>Avg recs: %{x:,.0f}<br>%{customdata:,} games<extra></extra>",
         ))
@@ -230,8 +233,8 @@ class SteamDatabase:
         by_year = df.groupby("release_year").size()
         fig_year = go.Figure(go.Scatter(
             x=by_year.index.tolist(), y=by_year.tolist(), mode="lines+markers",
-            line=dict(color="#fff312", width=2), marker=dict(size=6, color="#fff312"),
-            fill="tozeroy", fillcolor="rgba(255,243,18,0.06)",
+            line=dict(color="#f5b83d", width=2.5), marker=dict(size=7, color="#f5b83d", line=dict(color="#151b24", width=2)),
+            fill="tozeroy", fillcolor="rgba(245,184,61,0.12)",
             hovertemplate="%{x}: %{y:,} games released<extra></extra>",
         ))
         fig_year.update_xaxes(dtick=1)
@@ -284,16 +287,16 @@ class SteamDatabase:
         # A value of 50 marks the genre median; the game's values show its percentile ranks.
         fig.add_trace(go.Scatterpolar(
             r=[50, 50, 50, 50], theta=axes + [axes[0]], fill="toself", name="Genre median",
-            line=dict(color="#8a8a8a", dash="dot"), fillcolor="rgba(138,138,138,0.06)",
+            line=dict(color="#7d8aa0", dash="dot"), fillcolor="rgba(125,138,160,0.08)",
         ))
         fig.add_trace(go.Scatterpolar(
             r=scores + [scores[0]], theta=axes + [axes[0]], fill="toself", name=game["name"],
-            line=dict(color="#fff312", width=2), fillcolor="rgba(255,243,18,0.12)",
+            line=dict(color="#ff7a45", width=2.5), fillcolor="rgba(255,122,69,0.22)",
         ))
         fig.update_layout(
             polar=dict(bgcolor="rgba(0,0,0,0)",
-                       radialaxis=dict(range=[0, 100], ticksuffix="%", gridcolor="#262626"),
-                       angularaxis=dict(gridcolor="#262626")),
+                       radialaxis=dict(range=[0, 100], ticksuffix="%", gridcolor="#2a3442"),
+                       angularaxis=dict(gridcolor="#2a3442")),
             showlegend=True, legend=dict(orientation="h", y=-0.1),
         )
         radar = style(fig, height=360)
@@ -335,7 +338,7 @@ class SteamDatabase:
         fig = go.Figure(go.Bar(
             x=small["recommendations"].tolist(), y=small["name"].tolist(), orientation="h",
             marker=dict(color=small["price_numeric"].tolist(),
-                        colorscale=[[0, "#3a3a3a"], [1, "#fff312"]],
+                        colorscale=[[0, "#2fbf71"], [0.5, "#f5b83d"], [1, "#ff7a45"]],
                         colorbar=dict(title="Price $", thickness=10)),
             hovertemplate="%{y}<br>%{x:,} recommendations<extra></extra>",
         ))
