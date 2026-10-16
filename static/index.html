@@ -12,6 +12,10 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="bg-shade" aria-hidden="true"></div>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
   <!-- Icon set (line icons, drawn with currentColor so CSS controls the colour) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
@@ -51,12 +55,17 @@
         <p class="eyebrow"><svg class="i"><use href="#i-pad"/></svg>Decision support for indie developers</p>
         <h1>Know the <em>Steam market</em> before you ship.</h1>
         <p class="lede">Pricing, genres and competitors across every Steam release from 2021 to 2025, in one place.</p>
+        <div class="hero-stats">
+          <div class="stat" style="--c: var(--blue)"><span class="ico"><svg class="i"><use href="#i-pad"/></svg></span><div><b data-count="games">0</b><small>games analysed</small></div></div>
+          <div class="stat" style="--c: var(--green)"><span class="ico"><svg class="i"><use href="#i-layers"/></svg></span><div><b data-count="genres">0</b><small>genres</small></div></div>
+          <div class="stat" style="--c: var(--amber)"><span class="ico"><svg class="i"><use href="#i-calendar"/></svg></span><div><b data-count="years">0</b><small>release years</small></div></div>
+        </div>
       </div>
-      <div class="hero-stats">
-        <div class="stat" style="--c: var(--blue)"><span class="ico"><svg class="i"><use href="#i-pad"/></svg></span><div><b data-count="games">0</b><small>games analysed</small></div></div>
-        <div class="stat" style="--c: var(--green)"><span class="ico"><svg class="i"><use href="#i-layers"/></svg></span><div><b data-count="genres">0</b><small>genres</small></div></div>
-        <div class="stat" style="--c: var(--amber)"><span class="ico"><svg class="i"><use href="#i-calendar"/></svg></span><div><b data-count="years">0</b><small>release years</small></div></div>
-      </div>
+      <figure class="tower" aria-label="3D chart: share of games with at least one recommendation, by price tier">
+        <div class="tower-stage"><div class="scene" id="scene"><div class="floor"></div></div></div>
+        <figcaption><span class="live"></span>Hit rate by price tier · reacts to your filters</figcaption>
+        <div class="tower-legend" id="tower-legend"></div>
+      </figure>
     </section>
 
     <div id="error" class="error" hidden></div>
@@ -152,6 +161,7 @@
   <footer>Built with Python · pandas · SQLite · Plotly <span class="sep">/</span> Data: Steam games 2021–2025</footer>
 
   <script src="/static/plotly.min.js"></script>
+  <script src="/static/fx.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

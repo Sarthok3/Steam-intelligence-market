@@ -63,6 +63,7 @@ document.querySelectorAll(".tab").forEach((button) => {
 
 function switchTab(name) {
   state.tab = name;
+  document.dispatchEvent(new CustomEvent("tabchange", { detail: name }));
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
   $("#filters").hidden = !(name === "market" || name === "data");
@@ -119,6 +120,8 @@ async function loadOverview() {
     countUp($("#m-recs"), m.avg_recs);
     countUp($("#m-rated"), m.pct_rated, (n) => n.toFixed(1) + "%");
 
+    updateTower(data.figures);
+
     const empty = !data.figures;
     $("#market-empty").hidden = !empty;
     charts.hidden = empty;
@@ -133,6 +136,14 @@ async function loadOverview() {
   } finally {
     charts.classList.remove("loading");
   }
+}
+
+// Feed the hit rate per tier to the 3D chart in the hero (fx.js); tiers that are filtered out drop to zero.
+function updateTower(figures) {
+  if (!window.FX) return;
+  const rate = figures ? figures.rate.data[0] : { x: [], y: [] };
+  const byTier = Object.fromEntries(rate.x.map((tier, i) => [tier, rate.y[i]]));
+  FX.tower(state.allTiers.map((tier) => ({ label: tier, value: byTier[tier] || 0, color: tierColor(tier) })));
 }
 
 // ---------- benchmark ----------
