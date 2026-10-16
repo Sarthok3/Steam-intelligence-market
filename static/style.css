@@ -413,20 +413,6 @@ footer { overflow: hidden; padding-top: 40px; }
 .wordmark { font-size: clamp(4rem, 17vw, 15rem); font-weight: 800; letter-spacing: -.06em; line-height: .85; text-align: center; color: var(--text); margin-bottom: 28px; will-change: translate; }
 .wordmark span { color: transparent; -webkit-text-stroke: 2px var(--accent); margin-left: .12em; transition: -webkit-text-stroke-color .6s; }
 
-/* ---------- cursor ring ---------- */
-.cursor { position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; display: none; }
-.cursor.on { display: block; }
-.cursor.gone span { opacity: 0; }
-.cursor span {
-  position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%;
-  border: 1.5px solid #fff; mix-blend-mode: difference;
-  display: grid; place-items: center; font-size: 0; font-weight: 600; color: #000;
-  transition: transform .3s cubic-bezier(.3, 1.5, .5, 1), background-color .3s, opacity .3s, font-size .2s;
-}
-.cursor.hover span { transform: scale(1.6); background: #fff; }
-.cursor.drag span { transform: scale(2); background: #fff; font-size: 7px; }
-.cursor.drag span::after { content: "DRAG"; letter-spacing: .08em; }
-
 /* ---------- magnetic buttons + border spotlight ---------- */
 .magnet { transition: translate .45s cubic-bezier(.3, 1.6, .5, 1), transform .15s, background-color .15s; }
 .card::before, .finding::before, .stat::before {

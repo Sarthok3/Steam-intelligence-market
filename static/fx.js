@@ -415,22 +415,6 @@
   document.querySelectorAll(".card-head h3").forEach((h) =>
     h.closest(".card").addEventListener("mouseenter", () => scramble(h, 450)));
 
-  // Cursor ring that trails the pointer and reacts to what is underneath it.
-  const cursor = document.getElementById("cursor");
-  const pointer = { x: -100, y: -100, cx: -100, cy: -100 };
-  if (cursor && fine && !reduceMotion) {
-    cursor.classList.add("on");
-    addEventListener("pointermove", (e) => {
-      pointer.x = e.clientX;
-      pointer.y = e.clientY;
-      const t = e.target.closest ? e.target : document.body;
-      cursor.classList.toggle("hover", !!t.closest("a, button, .chip, .tab, input, .finding"));
-      cursor.classList.toggle("drag", !!t.closest(".tower-stage"));
-    }, { passive: true });
-    document.addEventListener("pointerleave", () => cursor.classList.add("gone"));
-    document.addEventListener("pointerenter", () => cursor.classList.remove("gone"));
-  }
-
   // Magnetic buttons lean toward the pointer.
   if (fine && !reduceMotion) {
     document.querySelectorAll(".btn, .chat-form button, .logo, .scroll-cue").forEach((el) => {
@@ -503,13 +487,6 @@
       const p = clamp((innerHeight - box.top) / box.height, 0, 1);
       wordmark.style.translate = `0 ${((1 - p) * 70).toFixed(1)}%`;
       wordmark.style.opacity = p.toFixed(3);
-    }
-
-    // Cursor ring.
-    if (cursor) {
-      pointer.cx += (pointer.x - pointer.cx) * 0.2;
-      pointer.cy += (pointer.y - pointer.cy) * 0.2;
-      cursor.style.transform = `translate(${pointer.cx.toFixed(1)}px, ${pointer.cy.toFixed(1)}px)`;
     }
   }
 
