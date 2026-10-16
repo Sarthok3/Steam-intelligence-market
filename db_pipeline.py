@@ -12,6 +12,7 @@ CSV_PATH = os.path.join("data", "steam_games.csv")
 DB_PATH = os.path.join("data", "steam_warehouse.db")
 
 PRICE_BINS = [-1, 0, 4.99, 9.99, 19.99, 29.99, float("inf")]
+# Keep these labels in the same order as the intervals in PRICE_BINS.
 PRICE_LABELS = [
     "Free",
     "$0.01-$4.99",
@@ -49,10 +50,12 @@ class SteamPipeline:
             self.df = pd.read_csv(self.csv_path)
         except FileNotFoundError:
             raise SystemExit(f"Error: {self.csv_path} not found. Put the CSV in the data/ folder.")
+        # Standardize headers so later steps can use predictable column names.
         self.df.columns = self.df.columns.str.strip().str.lower()
 
     def transform(self):
         print("2. Cleaning data...")
+        # Each Steam app should contribute only one record to the game fact table.
         df = self.df.drop_duplicates(subset="appid").copy()
         df["price_numeric"] = df["price"].apply(clean_price)
         df["price_tier"] = pd.cut(df["price_numeric"], bins=PRICE_BINS, labels=PRICE_LABELS).astype(str)
@@ -60,24 +63,28 @@ class SteamPipeline:
         df["developer"] = df["developer"].fillna("Unknown")
         df["publisher"] = df["publisher"].fillna("Unknown")
         df["recommendations"] = df["recommendations"].fillna(0).astype(int)
+        # The dashboard uses the first listed genre as a single primary genre.
         df["primary_genre"] = df["genres"].str.split(";").str[0]
         self.df = df
 
     def load(self):
         print("3. Loading into SQLite...")
-        # one row per (game, genre) so genres can be counted properly
+        # Split multi-genre entries into separate rows so each genre can be counted.
         genres = self.df[["appid", "genres"]].copy()
         genres["genre"] = genres["genres"].str.split(";")
         genres = genres.explode("genre")[["appid", "genre"]]
 
         conn = sqlite3.connect(self.db_path)
         try:
+            # Replace the tables with the latest transformed data on every run.
             self.df.to_sql("fact_steam_games", conn, if_exists="replace", index=False)
             genres.to_sql("dim_genres", conn, if_exists="replace", index=False)
+            # Indexes speed up the lookups used by search and genre queries.
             conn.execute("CREATE INDEX IF NOT EXISTS idx_games_name ON fact_steam_games(name)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_games_appid ON fact_steam_games(appid)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_genres_genre ON dim_genres(genre)")
             conn.execute("DROP VIEW IF EXISTS view_genre_performance")
+            # Keep common genre-level metrics available as a reusable database view.
             conn.execute(
                 """
                 CREATE VIEW view_genre_performance AS

@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 from db_pipeline import DB_PATH, PRICE_LABELS, SteamPipeline
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-TIER_COLORS = ["#00f5d4", "#00bbf9", "#9b5de5", "#c04fd8", "#f15bb5", "#ff9f1c"]
+TIER_COLORS = ["#3a3a3a", "#555555", "#777777", "#9a9a9a", "#cfcfcf", "#fff312"]
 
 
 # ---------------------------------------------------------------
@@ -35,13 +35,13 @@ def style(fig, height=330):
         template="plotly_dark",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Space Grotesk, sans-serif", color="#cfd8ff"),
+        font=dict(family="Inter, sans-serif", color="#8a8a8a"),
         margin=dict(l=10, r=10, t=10, b=10),
         height=height,
         showlegend=False,
     )
-    fig.update_xaxes(gridcolor="rgba(255,255,255,0.07)", zeroline=False)
-    fig.update_yaxes(gridcolor="rgba(255,255,255,0.07)", zeroline=False)
+    fig.update_xaxes(gridcolor="#1f1f1f", linecolor="#262626", zeroline=False)
+    fig.update_yaxes(gridcolor="#1f1f1f", linecolor="#262626", zeroline=False)
     return json.loads(fig.to_json())
 
 
@@ -90,6 +90,7 @@ class QueryParser:
                 genre = name
                 break
         if genre:
+            # Match against the normalized genre table because a game can have several genres.
             conditions.append("f.appid IN (SELECT appid FROM dim_genres WHERE genre = ?)")
             params.append(genre)
             understood.append(f"genre = {genre}")
@@ -129,6 +130,7 @@ class QueryParser:
 
         # "top 5" -> how many rows (default 10, never more than 50)
         top = re.search(r"top\s*(\d+)", text)
+        # Bound user-requested result sizes to keep responses small.
         limit = min(max(int(top.group(1)), 1), 50) if top else 10
 
         where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
@@ -156,6 +158,7 @@ class SteamDatabase:
             raise RuntimeError(f"Database problem: {err}")
 
     def _filter(self, tiers, min_recs):
+        # Use placeholders for all filter values instead of interpolating user input into SQL.
         marks = ",".join("?" * len(tiers))
         return f"f.price_tier IN ({marks}) AND f.recommendations >= ?", list(tiers) + [min_recs]
 
@@ -215,9 +218,10 @@ class SteamDatabase:
             "GROUP BY g.genre HAVING COUNT(*) >= 5 ORDER BY avg_recs DESC LIMIT 10",
             params,
         ).iloc[::-1]
+        # Reverse the sorted rows so the largest horizontal bar appears at the top.
         fig_genre = go.Figure(go.Bar(
             x=genre_df["avg_recs"].round(1).tolist(), y=genre_df["genre"].tolist(), orientation="h",
-            marker=dict(color=genre_df["avg_recs"].tolist(), colorscale=[[0, "#9b5de5"], [1, "#00f5d4"]]),
+            marker=dict(color=genre_df["avg_recs"].tolist(), colorscale=[[0, "#3a3a3a"], [1, "#fff312"]]),
             customdata=genre_df["games"].tolist(),
             hovertemplate="%{y}<br>Avg recs: %{x:,.0f}<br>%{customdata:,} games<extra></extra>",
         ))
@@ -226,8 +230,8 @@ class SteamDatabase:
         by_year = df.groupby("release_year").size()
         fig_year = go.Figure(go.Scatter(
             x=by_year.index.tolist(), y=by_year.tolist(), mode="lines+markers",
-            line=dict(color="#f15bb5", width=3), marker=dict(size=9, color="#00f5d4"),
-            fill="tozeroy", fillcolor="rgba(241,91,181,0.18)",
+            line=dict(color="#fff312", width=2), marker=dict(size=6, color="#fff312"),
+            fill="tozeroy", fillcolor="rgba(255,243,18,0.06)",
             hovertemplate="%{x}: %{y:,} games released<extra></extra>",
         ))
         fig_year.update_xaxes(dtick=1)
@@ -277,23 +281,25 @@ class SteamDatabase:
         ]
         axes = ["Price", "Recommendations", "Newness"]
         fig = go.Figure()
+        # A value of 50 marks the genre median; the game's values show its percentile ranks.
         fig.add_trace(go.Scatterpolar(
             r=[50, 50, 50, 50], theta=axes + [axes[0]], fill="toself", name="Genre median",
-            line=dict(color="#00bbf9", dash="dot"), fillcolor="rgba(0,187,249,0.10)",
+            line=dict(color="#8a8a8a", dash="dot"), fillcolor="rgba(138,138,138,0.06)",
         ))
         fig.add_trace(go.Scatterpolar(
             r=scores + [scores[0]], theta=axes + [axes[0]], fill="toself", name=game["name"],
-            line=dict(color="#00f5d4", width=3), fillcolor="rgba(0,245,212,0.25)",
+            line=dict(color="#fff312", width=2), fillcolor="rgba(255,243,18,0.12)",
         ))
         fig.update_layout(
             polar=dict(bgcolor="rgba(0,0,0,0)",
-                       radialaxis=dict(range=[0, 100], ticksuffix="%", gridcolor="rgba(255,255,255,0.12)"),
-                       angularaxis=dict(gridcolor="rgba(255,255,255,0.12)")),
+                       radialaxis=dict(range=[0, 100], ticksuffix="%", gridcolor="#262626"),
+                       angularaxis=dict(gridcolor="#262626")),
             showlegend=True, legend=dict(orientation="h", y=-0.1),
         )
         radar = style(fig, height=360)
         radar["layout"]["showlegend"] = True
 
+        # Compare against same-genre games in a nearby price band; widen the band for cheap games.
         low, high = price * 0.7, max(price * 1.3, price + 2.0)
         rivals = self.query(
             "SELECT f.name AS title, f.price_numeric AS price, f.recommendations AS recs "
@@ -329,7 +335,7 @@ class SteamDatabase:
         fig = go.Figure(go.Bar(
             x=small["recommendations"].tolist(), y=small["name"].tolist(), orientation="h",
             marker=dict(color=small["price_numeric"].tolist(),
-                        colorscale=[[0, "#00f5d4"], [1, "#f15bb5"]],
+                        colorscale=[[0, "#3a3a3a"], [1, "#fff312"]],
                         colorbar=dict(title="Price $", thickness=10)),
             hovertemplate="%{y}<br>%{x:,} recommendations<extra></extra>",
         ))
@@ -364,6 +370,7 @@ class SteamHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         url = urlparse(self.path)
+        # Parse query parameters once so each API route can validate and use its inputs.
         args = {key: values[0] for key, values in parse_qs(url.query, keep_blank_values=True).items()}
         try:
             if url.path == "/api/meta":

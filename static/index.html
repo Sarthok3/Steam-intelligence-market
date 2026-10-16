@@ -8,19 +8,17 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="bg" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
-
   <header class="nav">
-    <div class="logo">STEAM<span>//</span>INTEL</div>
+    <div class="logo">Steam Intel</div>
     <nav class="tabs" id="tabs">
-      <button class="tab active" data-tab="market">📊 Market</button>
-      <button class="tab" data-tab="benchmark">🎯 Benchmark</button>
-      <button class="tab" data-tab="chat">💬 Ask the Data</button>
-      <button class="tab" data-tab="data">📁 Raw Data</button>
+      <button class="tab active" data-tab="market">Market</button>
+      <button class="tab" data-tab="benchmark">Benchmark</button>
+      <button class="tab" data-tab="chat">Ask the data</button>
+      <button class="tab" data-tab="data">Raw data</button>
     </nav>
   </header>
 
@@ -103,7 +101,7 @@
         <div class="chips" id="suggestions"></div>
         <form id="chat-form" class="chat-form">
           <input id="chat-input" type="text" autocomplete="off" placeholder="Ask about games, prices, genres, years…">
-          <button type="submit">Send ➤</button>
+          <button type="submit">Send</button>
         </form>
       </div>
     </section>
@@ -113,7 +111,7 @@
       <div class="card">
         <div class="row-between">
           <h3>Data warehouse export <span class="hint" id="data-count"></span></h3>
-          <a class="btn" id="download" href="/download.csv">⬇ Download filtered CSV</a>
+          <a class="btn" id="download" href="/download.csv">Download CSV</a>
         </div>
         <div class="table-wrap"><table id="data-table"></table></div>
       </div>

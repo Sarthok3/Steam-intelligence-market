@@ -16,7 +16,7 @@ function escapeHtml(text) {
 
 function showError(message) {
   const box = $("#error");
-  box.textContent = "⚠ " + message;
+  box.textContent = message;
   box.hidden = false;
   clearTimeout(showError.timer);
   showError.timer = setTimeout(() => (box.hidden = true), 6000);

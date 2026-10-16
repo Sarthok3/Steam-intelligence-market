@@ -27,6 +27,7 @@ def load_data():
 
 
 def price_tier_summary(df):
+    # observed=False keeps every configured tier in the result, even if it has no games.
     return df.groupby("price_tier", observed=False).agg(
         games=("appid", "count"),
         avg_recs=("recommendations", "mean"),
@@ -35,13 +36,14 @@ def price_tier_summary(df):
 
 
 def genre_summary(df):
-    """One row per (game, genre) so 'Action;RPG' counts for both genres."""
+    """Count each game once for every genre it lists, then return the top 10."""
     split = df.assign(genre=df["genres"].fillna("Uncategorized").str.split(";")).explode("genre")
     summary = split.groupby("genre").agg(
         games=("appid", "count"),
         avg_recs=("recommendations", "mean"),
         median_recs=("recommendations", "median"),
     ).round(1)
+    # Exclude small samples so the displayed rankings are less sensitive to outliers.
     return summary[summary["games"] >= 100].sort_values("avg_recs", ascending=False).head(10)
 
 
@@ -63,6 +65,7 @@ def save_charts(tiers):
         ax.tick_params(axis="x", rotation=30)
     plt.tight_layout()
     plt.savefig("data/price_vs_recommendations.png", dpi=130)
+    # Release the figure resources after writing the image file.
     plt.close()
 
 
