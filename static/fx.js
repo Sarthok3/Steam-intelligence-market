@@ -166,7 +166,7 @@
 
   function tower(items) {
     if (!scene) return;
-    const max = Math.max(50, ...items.map((item) => item.value));
+    const max = Math.max(20, ...items.map((item) => item.value));
     const total = items.length * BAR + (items.length - 1) * GAP;
     items.forEach((item, i) => {
       let bar = scene.querySelector(`[data-i="${i}"]`);
@@ -183,14 +183,50 @@
       bar.style.height = height + "px";
       bar.classList.toggle("off", !item.value);
       bar.querySelector("b").textContent = height > 26 ? Math.round(item.value) + "%" : "";
-      bar.title = `${item.label}: ${item.value.toFixed(1)}% of games got a recommendation`;
+      bar.title = `${item.label}: ${item.games.toLocaleString()} games (${item.value.toFixed(1)}%)`;
     });
     if (legend) {
       legend.innerHTML = items.map((item) =>
         `<span style="--c: ${item.color}"><i></i>${item.label}</span>`).join("");
     }
   }
-  window.FX = { tower };
+  // Drag the chart to spin it; it keeps a little momentum after you let go.
+  const drag = { on: false, x: 0, spin: 0, velocity: 0 };
+  const stage = document.querySelector(".tower-stage");
+  if (stage) {
+    stage.addEventListener("pointerdown", (e) => {
+      drag.on = true; drag.x = e.clientX; stage.setPointerCapture(e.pointerId); stage.classList.add("grabbing");
+    });
+    stage.addEventListener("pointermove", (e) => {
+      if (!drag.on) return;
+      drag.velocity = (e.clientX - drag.x) * 0.5;
+      drag.spin += drag.velocity;
+      drag.x = e.clientX;
+    });
+    const release = () => { drag.on = false; stage.classList.remove("grabbing"); };
+    stage.addEventListener("pointerup", release);
+    stage.addEventListener("pointercancel", release);
+  }
+
+  // ------------------------------------------------------------------
+  // Loading screen: app.js calls FX.ready() once the first data has arrived.
+  // ------------------------------------------------------------------
+  const loader = document.getElementById("loader");
+  const shownAt = performance.now();
+  document.body.classList.add("is-loading");
+  function ready() {
+    const wait = Math.max(0, 700 - (performance.now() - shownAt));  // avoid a jarring flash
+    setTimeout(() => {
+      document.body.classList.remove("is-loading");
+      if (loader) {
+        loader.classList.add("done");
+        loader.addEventListener("transitionend", () => loader.remove(), { once: true });
+      }
+    }, wait);
+  }
+  setTimeout(ready, 10000);  // never leave someone stuck on the loader
+
+  window.FX = { tower, ready };
 
   // ------------------------------------------------------------------
   // 3. Scroll reveal, card tilt, progress bar
@@ -233,6 +269,85 @@
   }
 
   // ------------------------------------------------------------------
+  // Micro-interactions
+  // ------------------------------------------------------------------
+  const hero = document.querySelector(".hero");
+
+  // Headline: wrap each word so they can flip up one after another.
+  const h1 = document.querySelector(".hero h1");
+  if (h1 && !reduceMotion) {
+    let n = 0;
+    const walker = document.createTreeWalker(h1, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+    textNodes.forEach((node) => {
+      const frag = document.createDocumentFragment();
+      node.textContent.split(/(\s+)/).forEach((part) => {
+        if (!part.trim()) { frag.append(part); return; }
+        const word = document.createElement("span");
+        word.className = "w";
+        word.style.setProperty("--i", n++);
+        word.textContent = part;
+        frag.append(word);
+      });
+      node.replaceWith(frag);
+    });
+  }
+
+  // Ripple from the exact point you click on buttons, tabs and chips.
+  document.addEventListener("pointerdown", (e) => {
+    const target = e.target.closest(".tab, .chip, .btn, .chat-form button");
+    if (!target || reduceMotion) return;
+    const box = target.getBoundingClientRect();
+    const ripple = document.createElement("span");
+    ripple.className = "ripple";
+    ripple.style.left = e.clientX - box.left + "px";
+    ripple.style.top = e.clientY - box.top + "px";
+    target.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove());
+  });
+
+  // A highlight that slides between tabs instead of jumping.
+  const indicator = document.getElementById("tab-ind");
+  function moveIndicator() {
+    const active = document.querySelector(".tab.active");
+    if (!indicator || !active) return;
+    indicator.style.width = active.offsetWidth + "px";
+    indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+    indicator.style.setProperty("--c", getComputedStyle(active).getPropertyValue("--c"));
+  }
+  document.addEventListener("tabchange", () => requestAnimationFrame(moveIndicator));
+  addEventListener("resize", moveIndicator);
+  document.fonts?.ready.then(moveIndicator);
+  moveIndicator();
+
+  // Slider track fills up to the thumb.
+  const range = document.getElementById("min-recs");
+  if (range) {
+    const fill = () => range.style.setProperty("--p", (range.value / range.max) * 100 + "%");
+    range.addEventListener("input", fill);
+    fill();
+  }
+
+  // Send button: the paper plane flies off when a question is sent.
+  const form = document.getElementById("chat-form");
+  form?.addEventListener("submit", () => {
+    const button = form.querySelector("button");
+    button.classList.remove("sent");
+    void button.offsetWidth;
+    button.classList.add("sent");
+  });
+
+  // Table rows cascade in whenever a table is (re)drawn.
+  const tableObserver = new MutationObserver((mutations) => {
+    mutations.forEach((m) => m.target.querySelectorAll?.("tr").forEach((row, i) => row.style.setProperty("--r", Math.min(i, 25))));
+  });
+  ["data-table", "rivals", "messages"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) tableObserver.observe(el, { childList: true, subtree: true });
+  });
+
+  // ------------------------------------------------------------------
   // Animation loop
   // ------------------------------------------------------------------
   let last = performance.now();
@@ -252,9 +367,15 @@
     if (progress) progress.style.transform = `scaleX(${Math.min(1, scrollY / maxScroll)})`;
 
     if (scene) {
-      const spin = -28 + Math.sin(now / 2500) * 10 + mouse.sx * 14 - Math.min(scrollSmooth, 900) * 0.04;
+      if (!drag.on) { drag.velocity *= 0.94; drag.spin += drag.velocity; }
+      const spin = -28 + drag.spin + Math.sin(now / 2500) * 10 + mouse.sx * 14 - Math.min(scrollSmooth, 900) * 0.04;
       const tilt = -18 + mouse.sy * 6 - Math.min(scrollSmooth, 900) * 0.012;
       scene.style.transform = `rotateX(${tilt.toFixed(2)}deg) rotateY(${spin.toFixed(2)}deg)`;
+    }
+
+    if (hero) {
+      hero.style.setProperty("--px", (mouse.sx * 10).toFixed(2) + "px");
+      hero.style.setProperty("--py", (mouse.sy * 8).toFixed(2) + "px");
     }
 
     if (!document.hidden) drawBackground(now, dt);

@@ -37,6 +37,9 @@ async function api(path) {
 // numbers count up from 0 for a bit of life
 function countUp(element, target, format = fmt, duration = 900) {
   const start = performance.now();
+  element.classList.remove("bump");
+  void element.offsetWidth;  // restart the CSS "bump" animation
+  element.classList.add("bump");
   function step(now) {
     const t = Math.min((now - start) / duration, 1);
     const eased = 1 - Math.pow(1 - t, 3);
@@ -138,12 +141,16 @@ async function loadOverview() {
   }
 }
 
-// Feed the hit rate per tier to the 3D chart in the hero (fx.js); tiers that are filtered out drop to zero.
+// Feed each tier's share of the filtered games to the 3D chart in the hero (fx.js).
+// The share changes with both the tier chips and the minimum-recommendations slider.
 function updateTower(figures) {
   if (!window.FX) return;
-  const rate = figures ? figures.rate.data[0] : { x: [], y: [] };
-  const byTier = Object.fromEntries(rate.x.map((tier, i) => [tier, rate.y[i]]));
-  FX.tower(state.allTiers.map((tier) => ({ label: tier, value: byTier[tier] || 0, color: tierColor(tier) })));
+  const tier = figures ? figures.tier.data[0] : { x: [], customdata: [] };
+  const counts = Object.fromEntries(tier.x.map((name, i) => [name, tier.customdata[i]]));
+  const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+  FX.tower(state.allTiers.map((name) => ({
+    label: name, value: ((counts[name] || 0) / total) * 100, games: counts[name] || 0, color: tierColor(name),
+  })));
 }
 
 // ---------- benchmark ----------
@@ -312,9 +319,10 @@ async function start() {
     document.querySelectorAll("[data-count]").forEach((el) => {
       countUp(el, meta[el.dataset.count], fmt, 1400);
     });
-    loadOverview();
+    await loadOverview();
   } catch (err) {
     showError(err.message);
   }
+  if (window.FX) FX.ready();  // hide the loading screen
 }
 start();
